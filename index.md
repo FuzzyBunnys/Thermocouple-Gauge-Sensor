@@ -3,13 +3,11 @@
 This is a project page detailing a microcontroller project that reads a vacuum thermocouple gauge. At its completion it will contain include all the necessary kicad files to create or modify your own pcb. A bill of materials (BOM) for the components necessary to assemble the pcb and the program to run the setup. It's core design is based on a circuit from [The Bell Jar](http://www.belljar.net/tcgauge.htm).
 
 
-You can use the [editor on GitHub](https://github.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+### The PCB
+The PCB is the first complete section of the project. It connects a [TI Tiva C Launchpad](https://www.ti.com/tool/EK-TM4C123GXL) to a [SparkFun LCD display](https://www.sparkfun.com/products/16397) and non-inverting op-amp that amplifies the signal from the vacuum thermocouple gauge. It was designed in KiCad and the boards themselves were manufacture by OSH Park, though of course you are able to use whichever manufacturer you prefer.  
+### The BOM
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
+### The Program
 
 ```markdown
 Syntax highlighted code block
@@ -31,10 +29,8 @@ Syntax highlighted code block
 
 For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
 
-### Jekyll Themes
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/settings). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
 
-### Support or Contact
+You can use the [editor on GitHub](https://github.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
