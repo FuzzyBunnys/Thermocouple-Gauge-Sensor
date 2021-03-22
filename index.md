@@ -1,4 +1,7 @@
-## Welcome to GitHub Pages
+## Thermocouple Vacuum Gauge.
+
+This is a project page detailing a microcontroller project that reads a vacuum thermocouple gauge. At its completion it will contain include all the necessary kicad files to create or modify your own pcb. A bill of materials (BOM) for the components necessary to assemble the pcb and the program to run the setup. It's core design is based on a circuit from [The Bell Jar] (http://www.belljar.net/tcgauge.htm).
+
 
 You can use the [editor on GitHub](https://github.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
 
