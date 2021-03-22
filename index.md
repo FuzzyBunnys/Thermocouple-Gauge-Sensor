@@ -6,7 +6,7 @@ This page details a small microcontroller project that reads a vacuum thermocoup
 
 
 ### The PCB
-The PCB connects a [TI Tiva C Launchpad](https://www.ti.com/tool/EK-TM4C123GXL) to a [SparkFun LCD display](https://www.sparkfun.com/products/16397) and a non-inverting op-amp that amplifies the signal from the vacuum thermocouple gauge. It was designed in KiCad and the boards themselves were manufactured by OSH Park, though of course you are able to use whichever manufacturer you prefer. You can see the bare board below. All of the necessary files (including gerbers) are included in the [Thermocouple Gauge folder](https://github.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/tree/main/Thermocouple%20Gauge). 
+The PCB connects a [TI Tiva C Launchpad](https://www.ti.com/tool/EK-TM4C123GXL) to a [SparkFun LCD display](https://www.sparkfun.com/products/16397) and a non-inverting op-amp that amplifies the signal from the vacuum thermocouple gauge. It was designed in KiCad and the boards themselves were manufactured by [OSH Park](https://oshpark.com/), though of course you are able to use whichever manufacturer you prefer. You can see the bare board below. All of the necessary files (including gerbers) are included in the [Thermocouple Gauge folder](https://github.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/tree/main/Thermocouple%20Gauge). 
 
 ![Image of PCB](https://raw.githubusercontent.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/gh-pages/IMG_1577.png) 
 ### The BOM
