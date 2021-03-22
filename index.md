@@ -6,8 +6,10 @@ This is a project page detailing a microcontroller project that reads a vacuum t
 ### The PCB
 The PCB is the first complete section of the project. It connects a [TI Tiva C Launchpad](https://www.ti.com/tool/EK-TM4C123GXL) to a [SparkFun LCD display](https://www.sparkfun.com/products/16397) and non-inverting op-amp that amplifies the signal from the vacuum thermocouple gauge. It was designed in KiCad and the boards themselves were manufacture by OSH Park, though of course you are able to use whichever manufacturer you prefer. You can see the bare board and an assembled board below.
 ### The BOM
-
+The BOM is an excel file with a listing of all the required components for the PCB, certain components have the Digikey link included directly, but for generic components such as resistors or pin headers there is no Digikey link. It shouldn't be too difficult to select those components yourself.
 ### The Program
+The program is written in [Mecrisp Stellaris](https://mecrisp-stellaris-folkdoc.sourceforge.io/) a dialect of Forth. The process for setting up Mecrisp Stellaris on a TI Tiva C Launchpad is as follows.
+
 
 ```markdown
 Syntax highlighted code block
