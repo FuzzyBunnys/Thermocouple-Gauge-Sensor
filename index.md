@@ -1,6 +1,6 @@
 ## Thermocouple Vacuum Gauge.
 
-This is a project page detailing a microcontroller that reads a vacuum thermocouple gauge. At its completion it will contain include all the necessary kicad files to create or modify your own pcb, a bill of materials (BOM) for the components necessary to assemble the pcb and the program to run the whole thing. It's core design is based on a circuit from [The Bell Jar](http://www.belljar.net/tcgauge.htm).
+This page details a small microcontroller project that reads a vacuum thermocouple gauge. At its completion it will contain include all the necessary kicad files to create or modify your own pcb, a bill of materials (BOM) for the components necessary to assemble the pcb and the program to run the whole thing. It's core design is based on a circuit from [The Bell Jar](http://www.belljar.net/tcgauge.htm).
 
 
 ### The PCB
