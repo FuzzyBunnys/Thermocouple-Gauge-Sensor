@@ -65,17 +65,6 @@ Wire Wire Line
 	5500 2250 5500 3050
 Wire Wire Line
 	6000 2250 6200 2250
-$Comp
-L power:GND #PWR0101
-U 1 1 5F1D5358
-P 5600 3050
-F 0 "#PWR0101" H 5600 2800 50  0001 C CNN
-F 1 "GND" H 5605 2877 50  0000 C CNN
-F 2 "" H 5600 3050 50  0001 C CNN
-F 3 "" H 5600 3050 50  0001 C CNN
-	1    5600 3050
-	-1   0    0    1   
-$EndComp
 Text Notes 7500 4550 0    50   ~ 0
 TI Tiva Launchpad\n
 $Comp
@@ -290,11 +279,6 @@ Wire Wire Line
 Wire Wire Line
 	9050 4700 9550 4700
 NoConn ~ 7250 2750
-Wire Wire Line
-	5500 3050 5500 3250
-Wire Wire Line
-	5500 3250 5600 3250
-Connection ~ 5500 3050
 $Comp
 L Device:R_POT RV1
 U 1 1 601B11AE
@@ -333,4 +317,18 @@ Wire Wire Line
 	5000 3150 4750 3150
 Wire Wire Line
 	6500 2850 5800 2850
+Wire Wire Line
+	5500 3050 5600 3050
+Connection ~ 5500 3050
+$Comp
+L power:GND #PWR?
+U 1 1 60977A0C
+P 5600 3250
+F 0 "#PWR?" H 5600 3000 50  0001 C CNN
+F 1 "GND" H 5605 3077 50  0000 C CNN
+F 2 "" H 5600 3250 50  0001 C CNN
+F 3 "" H 5600 3250 50  0001 C CNN
+	1    5600 3250
+	1    0    0    -1  
+$EndComp
 $EndSCHEMATC
