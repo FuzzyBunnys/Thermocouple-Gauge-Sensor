@@ -18,9 +18,11 @@ The program is written in [Mecrisp-Stellaris](https://mecrisp-stellaris-folkdoc.
 3.	Connect the Tiva C series board via usb and the debug port
 4.	Load mecrisp-stellaris-lm4f120.bin using Uniflash on to the board
 5.	Make a connection at 115200 baud rate via TeraTerm to the launchpad board.
-6.	Reset the board and the welcome message for mecrisp stellaris should appear.
+6.	Reset the board and the welcome message for Mecrisp-Stellaris should appear.
 
-The code initializes the main peripherals (an ADC and SPI bus) on the TI Tiva C and then enters a polling loop where the ADC is read, the measured value is converted to a pressure measurement and then is printed out on to the connected LCD screen. The core function that performs the conversion is below. All calculations take place using fixed point values, and the core mathematical functions come from Matthias Koch's [fixed point library](https://mecrisp-stellaris-folkdoc.sourceforge.io/_downloads/fixpt-math-lib.fs) for Mecrisp-Stellaris.
+Once Mecrisp-Stellaris has been loaded you can use it as a development environment and test code as its written. The full program I wrote is available as a .txt file on github and was written in the Sublime 3 text editor. The code is well commented and should be relatively self-explanatory. 
+
+The code initializes the main peripherals (an ADC and SPI bus) on the TI Tiva C and then enters a polling loop where the ADC is read, the measured value is converted to a pressure measurement and then is printed out to the connected LCD screen. The core function that performs the conversion is below. All calculations take place using fixed point values, and the core mathematical functions come from Matthias Koch's [fixed point library](https://mecrisp-stellaris-folkdoc.sourceforge.io/_downloads/fixpt-math-lib.fs) for Mecrisp-Stellaris.
 
 
 ```markdown
