@@ -1,0 +1,441 @@
+\ this is a forth program to control an LCD screen and print values from a thermocouple vacuum sensor to a screen 
+\ using a TI TM4C123 - This is V2 since I decided to switch to a text LCD rather than a graphic one . 
+\ Making the program run from a cold boot or reset is called Turnkey and uses a special word called INIT 
+
+\ serial terminal baud rate should be set to 115200 and receive to Auto in teraterm, change font to 14 for ease of use
+\ view contents of a register with the following commands REGISTER_NAME @ hex . decimal - prints out in hex
+
+\ Notes on power : The Serial LCD supposedly draws a max of 20mA, that's not verified
+\ I can test device stability by disconnecting the PCB from the TIVA C Launchpad if needed
+\ I think I should be able to supply enough current to run without issue from the dev board
+\ but who really knows 
+
+
+\ Words have the following stack picture beside them ( INPUTS -- OUTPUTS )
+\ register definitions - must verify APB values vs AHB - currently using APB 
+$400FE060 constant RCC \ Run mode clock configuration 
+$400FE070 constant RCC2 \ Clock register 2 
+$400FE050 constant RIS \ Raw interrupt status register 
+$400FE638 constant RCGCADC \ clock gating control for adc  
+$400FE61C constant RCGCSSI \ SSI enable register
+$400FE608 constant RCGCGPIO \ clock enable for SSI
+$40004524 constant GPIOACR \ commit register - unlocks some bits for writing, don't need atm 
+$40004520 constant GPIOALOCK \ lock register - must write $4C4F434B to unlock the commit register for writing 
+$40004420 constant GPIOAAFSEL \ alternate function set - APB value - port A 
+$40005420 constant GPIOBAFSEL \ alternate function set - APB value - port B  
+$40024420 constant GPIOEAFSEL \ alternate function set port E - use APB! not AHB! 
+$40004528 constant GPIOAAMSEL \ analog set for port A
+$40024428 constant GPIOEAMSEL \ analog set for port E 
+$4000452C constant GPIOAPCTL \ mux register
+$4000451C constant GPIOADEN \ digital enable register A 
+$4000551C constant GPIOBDEN \ digital enable register B 
+$4002451C constant GPIOEDEN \ digital enable register E 
+$4002551C constant GPIOFDEN \ digital enable register F
+$40004400 constant GPIOADIR \ input/output for port A 
+$40005400 constant GPIOBDIR \ input/output for port B
+$40025400 constant GPIOFDIR \ input/output for port F
+$400053FC constant GPIOBDAT \ data for port b - something about the register mask, but this works for setting AO high!
+$400253FC constant GPIOFDAT \ wthe 3FC offset is the high end of the register address 
+$40004500 constant GPIOADR2R \ 2ma drive select for GPIOA pins 
+$4000450C constant GPIOAODR \ open drain select 
+$40004510 constant GPIOAPUR \ pull up register 
+$40004514 constant GPIOAPDR \ pull down register 
+$40008000 constant SSICR0 \ ssi control register 0 for ssi0
+$40008004 constant SSICR1 \ ssi control register 1 for ssi0
+$40008010 constant SSICPSR \ ssi clock prescale
+$40008FC8 constant SSICC \ ssi clock config
+$40008014 constant SSIIM \ ssi interrupt mask 
+$40008018 constant SSIRIS \ ssi raw interrupt status 
+$40008008 constant SSIDR \ ssi data register
+$4000800C constant SSISR \ ssi status register 
+$40008024 constant SSI0DMAC \ dma control register 
+$400FEA1C constant PRSSI \ peripheral ready register 
+$400FE31C constant PPSSI \ SSI peripheral present register 
+$400FE51C constant SRSSI \ SSI software reset 
+$40038038 constant ADC0CTRL \ adc control 
+$40038FC0 constant ADC0PP \ adc peripheral properties
+$40038FC4 constant ADC0PC \ adc peripheral control 
+$40038FC8 constant ADC0CC \ adc clock config 
+$40038028 constant ADCPSSI0 \ sample sequence initiate 
+$40038000 constant ADCACTSS0 \ sample sequence initialize register
+$40038014 constant ADCEMUX0 \ sample sequencer trigger set 
+$40038040 constant ADCSSMUX00 \ sample sequencer 0 for adc 0
+$40038048 constant ADCSSFIFO00 \ sample sequencer 0 result register
+$40038044 constant ADCSSCTL00 \ sample sequencer 0 control register 
+$40038030 constant ADCSAC0 \ sample averaging control register 
+
+\ CONSTANTS OF SOME UTILITY
+$FFFFFFFF $7FFFFFFF 2constant +inf \ 2147483648,99999999
+$0 $80000000 2constant -inf \ 2147483648,0
+2977044472 0 2constant lnof2
+\ number types work as follows
+\ % binary
+\ $ hex
+\ # decimal 
+
+\ to compile to flash, enter compiletoflash, your definitions will stick around after a reboot. 
+\ to compile to ram, type compiletoram, your definitions won't stick around after a reboot.
+\ so you've got a loop whereby you can test new stuff in ram, once it's working you can go and compiletoflash and jam it in there 
+\ can call eraseflash if you really bugger it up 
+\ if you screw up at any point in time you can go ahead and type in forgetram and start fresh 
+\ if I want to see the words in the dictionary I type words or list
+
+\ how do I read a register? REGISTER @ . 
+
+
+\ the program has the following general structure: check ADC -> convert value to pressure -> print to screen 
+	
+
+\ word definitions
+
+: ADCINIT ( -- ) \ she's a working! 
+\ initialize ADC0 - PIN PE3 for AIN0 - 
+	$1 RCGCADC bis! \ turn on clock for ADC0 	 
+	$10000 RCGCGPIO bis! \ turn on GPIOE for ADC pin	 
+	$1 ADC0CC bis! \ set PIOSC in ADCCC register 
+	$1 RCGCADC bis! \ enable clock in RCGCADC  
+	$8	GPIOEAFSEL bis! \ set AFSEL bits in GPIO - assume to 8 for pin 3 enable alternate function, pins start at 0? 
+	\ currently getting an unhandled interrupt here
+
+	$FFFFFFFF GPIOEDEN bic! \ GPIODEN analog inputs - clear DEN bits 
+	$8 GPIOEAMSEL bis! \ disable analog isolation circuit - write 1 to GPIOAMSEL 
+	$0000 ADCACTSS0 bis! \ clear sample sequencer bits 
+	$00000000 ADCEMUX0 bis! \ select trigger event - set it to PSSI register 
+	$00000000 ADCSSMUX00 bis! \ sample sequencer 0 for adc 0 
+	$40 ADC0CTRL bis! \ enable dither 
+	$6 ADCSAC0 bis! \ enable averaging 64x oversampling  
+	$1 ADCACTSS0 bis! \ enable sample sequencer 0 
+;
+
+
+
+: ADCREAD ( -- VALUE VALUE VALUE VALUE VALUE VALUE VALUE VALUE)
+\ something about a sample sequencer for the ADC? do I trigger it and then get a value? 
+	$1 ADCPSSI0 bis! \ trigger a sample using this register
+	BEGIN ADCACTSS0 @ $10000 AND WHILE REPEAT \ wait till the sample is done, 
+											  \ need some sort of loop here. There's a busy flag to test, 0 when done, 1 when busy. 
+	8 0 DO 	ADCSSFIFO00 @  LOOP \ read the sample - there will be 8 samples stored, so I'll have to read 8 times from this register to get all the data out 
+ 	\ I can dump them all on the stack - the 10 and 0 are place on the RETURN stack by DO, which is distinct from the parameter stack
+ 	\ don't need to call this right away, it'll be part of the main loop 
+;
+
+\ everything below has to refactored for the new screen when it arrives - think SPIINIT should mostly be ok though.  
+
+: SPIINIT ( -- )
+	$00000001 RCGCSSI bis! \ turn on spissi - that works, I can confirm its turned on 
+	$00000011 RCGCGPIO bis! \ turn on GPIOA and GPIOB clock - 
+	$00000011 GPIOBDIR bis! \ set GPIOB PIN 0 PIN 1 to output -default is 2ma drive  
+	$00000000 GPIOAAMSEL bis! \ disable analog functionality
+	%00111100 GPIOAAFSEL bis! \ AFSEL - try with all 1's 
+	$00222200 GPIOAPCTL bis! \ set mux for SSI 
+	%00111100 GPIOADEN bis! \ GPIODEN 
+	$00000011 GPIOBDEN bis! \ turn on GPIOB0/B1 for A0/RESET control 
+	$00000000 SSICR1 bis! \ must first turn off SSI0 and select master
+	$00000005 SSICC bis! \ select clock source - PIOSC 
+	$0000000A SSICPSR bis! \ apply clock prescaler - divide 16MHz by 10 for 100KHz bus speed, if this works try faster 
+	$00000F07 SSICR0 bis! \ set clock rate @ 100 KHZ assuming 16MHz system clock, clock phase captured on first edge, clock polarity low, protocol mode SPI,	
+								  \  data format 8 bit	
+	$00000002 SSICR1 bis! \ enable SSI - do I want this to be its own word?
+	\ so all of the values I've written to this point are written in the registers
+
+	\ So atm the FSS pin is correctly high. I cannot see the output of the clock or the TX pin, but I think it's because I'm not looking correctly
+
+	\ Need to config some GPIO pins for , RS, and A0 on the LCD screen
+	\ PB0 - A0 - I think both A0 and RST need to be hooked up to some GPIOB pins so I can control them differently
+	$2 GPIOBDAT bis! \ PB1 - RST - RST has to be held high I believe so the screen never resets, and A0 is low for command/high for 
+	\ It's possible to change the Baud rate of the screen, but to do that I have to change the SPI Baud rate as well
+	\ for now I'll leave that be 
+;
+
+
+
+: BUSY
+BEGIN SSISR @ $10 AND WHILE REPEAT \ load SSI Status register 
+; 
+
+
+: DELAY ( count -- ) \ does what it says on the box
+ 0 DO LOOP
+;
+
+: SEND ( COMMAND -- ) \ a word to send to the screen
+	$0 GPIOBDAT bis! \ A0 low
+	$2 SSICR1 bic! \ turn off SSI 
+
+	SSIDR bis! \ Load data in SSIDR this should work with the value on the stack no? 
+
+	$2 SSICR1 bis! \ Turn on SSI  
+
+	\ should I pull A0 high? I need a test to make sure I'm done sending though 
+;
+
+\ MATH FUNCTIONS BEGIN HERE 
+
+: AVERAGE ( VALUE VALUE VALUE VALUE VALUE VALUE VALUE VALUE -- MEASUREMENT )
+	\ sum up the values from the ADC and create an average 
+	 +
+	 + 
+	 +
+	 +
+	 +
+	 +
+	 + \ add up the 8 values on the stack - we've now got one on there. 
+	 8 \ put 8 on the stack a roo then we have 8 - average on the stack 
+	 / \ divide it 
+;
+
+: mfloor ( fd -- n ) 
+	swap drop \ again super self explanatory get rid of the ol decimal point
+;
+
+: s>df ( n -- df )
+	0 swap \ pretty self explanatory, converts a signed int to a fixed point number
+;
+
+: floor ( df -- df )
+\ return the floor of an s31.32 value df 
+	nip 0 swap 2-foldable
+;
+
+: numbertable <builds does> swap 2 lshift + @ ; \ no clue what this does
+\ apparently its from the common directory for mecrisp stellaris 
+\ I need it to setup this table I guess? 
+\ s31.32 comma parts of all but the first coefficient in the Horner expansion
+\ of a partial sum of the series expansion of exp(x). The whole parts are 0 and
+\ are supplied in code. 
+numbertable exp-coef 
+   390451572 ,   \  1/11
+   429496730 ,   \  1/10
+   477218588 ,   \  1/9
+   536870912 ,   \  1/8
+   615366757 ,   \  1/7
+   715827883 ,   \  1/6
+   858993459 ,   \  1/5
+  1073741824 ,   \  1/4
+  1431655765 ,   \  1/3
+  2147483648 ,   \  1/2
+
+
+: log2-1to2 ( y -- log2y )
+	 \ Helper function that requires y is s31.32 value with 1<= y < 2
+	 0 0 2swap 0 
+	 ( retval y cum_m )
+	 \ while((cum_m < 33) && (y>1))
+	 begin dup 2over
+	  ( retval y cum_m cum_m y)
+	  1,0 d> swap 33 < and while 
+	  ( retval y cum_m )
+	  rot rot 0 -rot \ m = 0, z = y
+	  ( retval cum_m m z )
+	  \ Do z = z*z, m = m+1 until 2<=z. We also get z<4
+	  begin 
+	  	2dup f* rot 1 +  -rot
+	  	( retval cum_m m z )
+	  	2dup 2,0 d< not
+	  until 
+	  \ At this point z = y^(2^m) so that log2(y) = (2^(-m))*log2(z)
+	  \ = (2^(-m))*(1 + log2(z/2)) and 1<= z/2 < 2
+	  \ We will add m to cum_m and add 2*(-cum_m) to the returned value,
+	  \ then iterate with a new y = z/2
+	  ( retval cum_m m z )
+	  2swap + -rot dshr 2>r \ cum_m = cum_m + m, y = z/2
+	  ( retval cum_m ) ( R: y = z/2 )
+	  \ retval = retval + 2^-cum_m 
+	  1,0 2 pick 0 do dshr loop
+	  ( retval cum_m 2^-cum_m )
+	  rot >r d+ 
+	  ( retval ) ( R: y cum_m )
+	  r> 2r> rot
+	  ( retval y cum_m )
+	  repeat 
+	  drop 2drop 
+	  2-foldable 
+;
+
+: exp-1to1 ( x -- expx )
+	 \ Calculate exp(x) for x an s31.32 value. Values are correct when 
+	 \ rounded to six decimal places when x is between +/- 0.7. Uses an
+	 \ 11-term partial sum evaluated using Horner's method 
+	 \ Calculate Horner terms 
+	 1,0 \ first Horner term is 1
+	 10 0 do
+	 	\ Multiply last term by x and coefficient, then add to get new term 
+	 	2over f* i exp-coef 0 f* 0 1 d+ 
+	 loop
+	 \ Final part of expansion
+	 2over f* 0 1 d+ 
+	 2nip 
+	 2-foldable  
+;
+
+: log2 ( x -- log2x )
+	\ Check that x>0, if not return "minus infinity"
+	2dup 0,0 d> not if 2drop -inf exit then
+	\ If x=1, return 0
+	2dup 1,0 d= if 2drop 0,0 exit then 
+
+	\ Find the n such that n <= (2^(-n))*x < 2
+	\ This n is the integer part (characteristic) of log2(x)
+	0 -rot 
+	( n = 0 y = x )
+	2dup 1,0 d> if 
+		\ Do n = n+1, y = y/2 while ( y >=2 )
+		begin 2dup 2,0 d< not while
+			( n y )
+			dshr rot 1 + -rot 
+		repeat
+	 else
+	 	\ Do n = n - 1, y = 2*y while ( y < 1 )
+	 	begin 2dup 1,0 d< while 
+	 		( n y )
+	 		dshl rot 1 - -rot 
+	 	repeat 
+	 then 
+
+	\ Now y = (2^(-n))*x so log2(x) = n + log2(y) and we use the 
+	\ helper function to get log2(y) since 1<= y < 2
+	log2-1to2 rot 0 swap d+
+	( log2x )
+	2-foldable 
+
+;
+
+: pow2 ( x -- 2^x )
+	\ Return 2 raised to the power x where x is s31.32
+	\ if x is 0, return 1
+	2dup 0,0 d= if 2drop 1,0 exit then 
+	\ If x < -32, 0 is returned. If x >= 31, returns s31.32 ceiling 
+	2dup -32,0 d< if 2drop +inf exit then 
+	\ Get largest integer n such that n <= x so x = z + n, 0 <= z < 1
+	2dup floor 2swap 2over d-
+	( n z )
+	\ Get exp(z*ln2) = 2^z, then shift n times to get 2^x = (2^n)*(2^z)
+	lnof2 f* exp-1to1 2swap nip 
+	( 2^z n ) \ n now a single
+	dup 0= if 
+		drop 
+	else 
+		dup 0< if 
+			negate 0 do dshr loop
+		else
+			0 do dshl loop 
+		then
+	then
+	2-foldable
+; 
+
+
+
+
+: CONVERT ( MEASUREMENT -- PRESSURE)
+	\ a word to convert the value from the circuit into a pressure value.  
+	\ firstly I take the very small value from the TC Gauge, and jam it into an amplification circuit.
+	\ The range on the amplification circuit is 0 -> 71.2 * Vmax. Here Vmax is 14mV so max input is 
+	\ This function currently assumes a 6343 or KJL 1518 type TC tube.
+	\ It implements an exponential function of the form y = 7,000,000 * x^(-2.032) 
+	\ Where x is in the input measurement and y is the output in mTorr
+	\ I may want to add some error checking here
+	\ test if the value is greater than some maximum say 2000 or something like that. 
+
+	s>df \ convert measurement value to fixed point
+	\ raise x to power -2.032
+	log2 2,032 f* \ take the log base 2 of x, multiply by our power
+	pow2 \ take the power of 2 to get rid of the log base 2
+	1,0 2swap f/ \ gotta divide our value into 1
+	7000000,0 f* \ put our scaling value for x on the stack and multiply
+	mfloor \ convert to integer by taking the nearest whole number 
+
+;
+
+: UPDATE ( PRESSURE -- ) 
+	\ a word to update the pressure on the screen
+	\ works with all the delays, no clue if there's a more concise way to do this 
+	\ leave it atm, doesn't need to be peanut buster parfait 
+	\ I may want to add some error checking here - if test value is too high print OVERVAL or something
+	\ test if the value is greater than some maximum say 2000. 
+
+	$7C SEND \ command mode 
+	10000 DELAY \ these delays were NECESSARY - not sure which specific ones though 
+	$2D SEND \ clear screen
+	10000 DELAY 
+	$1 GPIOBDAT bis! \ A0 high
+	10000 DELAY 
+	$0 GPIOBDAT bis! \ A0 low
+	10000 DELAY 
+
+	DUP 2000 > IF \ If the value on the stack is greater than 2000 we've got a problemo 
+		$4F SEND \ O
+		10000 DELAY 
+		$56 SEND \ V
+		10000 DELAY 
+		$45 SEND \ E
+		10000 DELAY 
+		$52 SEND \ R
+		10000 DELAY 
+		$56 SEND \ V
+		10000 DELAY 
+		$41 SEND \ A
+		10000 DELAY 
+		$4C SEND \ L
+		10000 DELAY 
+
+
+	ELSE
+		\ algorithm for digits to ASCII 
+		\ assume value has been pushed onto the stack 
+		1000 /MOD 48 + SEND \ add 48 so we have an ascii value printing out - then convert to hex
+		10000 DELAY 
+		100 /MOD 48 + SEND 
+		10000 DELAY 
+		10 /MOD 48 + SEND
+		10000 DELAY  
+		1 /MOD 48 + SEND 
+		10000 DELAY
+
+	THEN
+		\ add mTorr subscript here 
+		$3A SEND \ :
+		10000 DELAY 
+		$6D SEND \ m 
+		10000 DELAY 
+		$54 SEND \ T 
+		10000 DELAY 
+		$6F	SEND \ o 
+		10000 DELAY 
+		$72 SEND \ r
+		10000 DELAY 
+		$72 SEND \ r
+
+;
+
+
+\ TO ADD - SOME METHOD OF SAVING DATA TO PLOT LATER
+ 
+\ to read a register I'm going to want to use the following sequence: ADDRESS @ binary . decimal
+
+\ so the actual program will go
+	\ critical definitions
+	\ initialize peripherals
+	\ infinite loop read adc, convert value, print to screen
+	\ all above is just the initializations
+: RUN ( -- ) \ infinite loop to run the whole program
+
+	BEGIN 
+	. " This MCU is currently running a pressure measurement app" cr 
+	  ADCREAD \ - read les values
+	  AVERAGE \ - average the values this leaves a single value on the stack 
+	  CONVERT \ - this also leaves a single value on the stack 
+	  UPDATE  \ - this should clear the stack
+	\ That's it those four words are the whole loop 
+	key? UNTIL  \ make sure to break in a way to end the loop via the terminal
+;
+
+: INIT
+	ADCINIT \ call the bad boy 
+	SPIINIT \ config SPI for LCD
+
+
+	RUN \ DO IT
+;
+
+	
