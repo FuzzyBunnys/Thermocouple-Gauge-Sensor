@@ -45,10 +45,5 @@ mfloor \ convert to integer by taking the nearest whole number
 ;
 ```
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
-
-
-
-You can use the [editor on GitHub](https://github.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
-
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
+An image of the complete sensor hooked up to a test voltage source is below.
+![Final Sensor](https://raw.githubusercontent.com/FuzzyBunnys/Thermocouple-Gauge-Sensor/gh-pages/IMG_1756.JPG)
